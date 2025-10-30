@@ -83,16 +83,22 @@ async function validateWager(uid, wager) {
 
 async function updateBalance(uid, delta, game, transactionData) {
   const userRef = db.collection('users').doc(uid);
+  const leaderboardRef = db.collection('leaderboard').doc(uid);
 
   const result = await db.runTransaction(async (transaction) => {
+    // ALL READS FIRST
     const userDoc = await transaction.get(userRef);
+    const leaderboardDoc = await transaction.get(leaderboardRef);
+
     if (!userDoc.exists) {
       throw new Error('User not found');
     }
 
     const oldBalance = userDoc.data().balance;
     const newBalance = Math.max(0, oldBalance + delta);
+    const bestBalance = leaderboardDoc.exists ? (leaderboardDoc.data().bestBalance || oldBalance) : oldBalance;
 
+    // NOW ALL WRITES
     transaction.update(userRef, {
       balance: newBalance,
       lastGameAt: admin.firestore.FieldValue.serverTimestamp()
@@ -118,17 +124,11 @@ async function updateBalance(uid, delta, game, transactionData) {
       ...transactionData
     });
 
-    const leaderboardRef = db.collection('leaderboard').doc(uid);
-    const leaderboardDoc = await transaction.get(leaderboardRef);
-
-    if (leaderboardDoc.exists) {
-      const bestBalance = leaderboardDoc.data().bestBalance || oldBalance;
-      if (newBalance > bestBalance) {
-        transaction.update(leaderboardRef, {
-          bestBalance: newBalance,
-          lastUpdated: admin.firestore.FieldValue.serverTimestamp()
-        });
-      }
+    if (leaderboardDoc.exists && newBalance > bestBalance) {
+      transaction.update(leaderboardRef, {
+        bestBalance: newBalance,
+        lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+      });
     }
 
     return newBalance;
