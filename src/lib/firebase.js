@@ -3,14 +3,14 @@ import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 
-// Firebase configuration from environment variables
+// Firebase configuration
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: "AIzaSyDrTWkB7FI7KGES0179xuMzx5gA21Cbvcc",
+  authDomain: "fatty-casino.firebaseapp.com",
+  projectId: "fatty-casino",
+  storageBucket: "fatty-casino.appspot.com",
+  messagingSenderId: "591342088549",
+  appId: "1:591342088549:web:3e2b8791677f375881718c"
 };
 
 // Initialize Firebase
