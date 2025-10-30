@@ -11,8 +11,8 @@ export async function initializeUser() {
   const userDoc = await getDoc(userRef);
 
   if (!userDoc.exists()) {
-    // Initialize new user with economy.initUser Cloud Function
-    const initUser = httpsCallable(functions, 'economy-initUser');
+    // Initialize new user with economyInitUser Cloud Function
+    const initUser = httpsCallable(functions, 'economyInitUser');
     try {
       const result = await initUser({ uid: user.uid });
       return result.data;
