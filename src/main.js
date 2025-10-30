@@ -1,5 +1,6 @@
 import { signIn, onAuthChange, getCurrentUser } from './lib/firebase.js';
-import { initializeUser, getUserBalance } from './lib/auth.js';
+import { initializeUser, getUserBalance, getCurrentUserData } from './lib/auth.js';
+import { db } from './lib/firebase.js';
 import { initWheel } from './games/wheel.js';
 import { initCoinFlip } from './games/coinflip.js';
 import { initHighLow } from './games/highlow.js';
@@ -48,6 +49,10 @@ async function updateUIAfterAuth() {
   // Load initial leaderboard
   await loadLeaderboard();
   await loadHistory();
+
+  // Load profile
+  await loadProfile();
+  setupProfileListeners();
 }
 
 function updateUIBeforeAuth() {
@@ -101,6 +106,11 @@ function setupEventListeners() {
       if (tab === 'history') {
         loadHistory();
       }
+
+      // Load profile when switching to it
+      if (tab === 'profile') {
+        loadProfile();
+      }
     });
   });
 }
@@ -134,11 +144,19 @@ async function loadLeaderboard() {
           medal = '🥉';
         }
 
+        // Get initials for avatar
+        const displayName = entry.displayName || 'Anonymous';
+        const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+        const avatarColor = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'][index % 5];
+
         return `
           <div class="leaderboard-entry ${medalClass}">
             <div class="leaderboard-rank">${medal} #${rank}</div>
-            <div class="leaderboard-name">${entry.displayName || 'Anonymous'}</div>
-            <div class="leaderboard-balance">${entry.bestBalance.toLocaleString()} FB</div>
+            <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, ${avatarColor}, #FFD700); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; color: white; flex-shrink: 0;">
+              ${initials}
+            </div>
+            <div class="leaderboard-name">${displayName}</div>
+            <div class="leaderboard-balance">${entry.bestBalance.toLocaleString()} FATTY BUCKS</div>
           </div>
         `;
       })
@@ -183,7 +201,7 @@ async function loadHistory() {
             </div>
             <div style="text-align: right;">
               <div style="color: ${isWin ? 'var(--win)' : 'var(--lose)'}; font-weight: 600;">${resultText}</div>
-              <div style="color: var(--gold); font-size: var(--font-size-sm);">${amount} FB</div>
+              <div style="color: var(--gold); font-size: var(--font-size-sm);">${amount} FATTY BUCKS</div>
             </div>
           </div>
         `;
@@ -193,6 +211,88 @@ async function loadHistory() {
     console.error('History error:', error);
     historyList.innerHTML = `<div class="card" style="text-align: center; color: var(--lose);">Failed to load history</div>`;
   }
+}
+
+// Profile Management
+async function loadProfile() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  try {
+    const userData = await getCurrentUserData();
+    if (userData) {
+      const nameInput = document.getElementById('profile-name-input');
+      const uidDisplay = document.getElementById('profile-uid');
+      const balanceDisplay = document.getElementById('profile-balance');
+      const bestDisplay = document.getElementById('profile-best');
+      const avatarDiv = document.getElementById('profile-avatar');
+
+      nameInput.value = userData.displayName || `Player${user.uid.substring(0, 6)}`;
+      uidDisplay.textContent = `ID: ${user.uid.substring(0, 12)}...`;
+      balanceDisplay.textContent = (userData.balance || 0).toLocaleString();
+
+      // Get leaderboard data for best balance
+      const leaderboardRef = db.collection('leaderboard').doc(user.uid);
+      const leaderboardDoc = await leaderboardRef.get();
+      if (leaderboardDoc.exists) {
+        bestDisplay.textContent = (leaderboardDoc.data().bestBalance || 0).toLocaleString();
+      }
+
+      // Update avatar with initials
+      const initials = (userData.displayName || 'P').split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+      avatarDiv.textContent = initials;
+    }
+  } catch (error) {
+    console.error('Error loading profile:', error);
+  }
+}
+
+function setupProfileListeners() {
+  const saveBtn = document.getElementById('profile-save-btn');
+  const nameInput = document.getElementById('profile-name-input');
+
+  saveBtn.addEventListener('click', async () => {
+    const user = getCurrentUser();
+    if (!user) return;
+
+    const newName = nameInput.value.trim();
+    if (!newName) {
+      alert('Please enter a name');
+      return;
+    }
+
+    try {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      // Update user document
+      const userRef = db.collection('users').doc(user.uid);
+      await userRef.update({ displayName: newName });
+
+      // Update leaderboard document
+      const leaderboardRef = db.collection('leaderboard').doc(user.uid);
+      await leaderboardRef.update({ displayName: newName });
+
+      // Update avatar
+      const avatarDiv = document.getElementById('profile-avatar');
+      const initials = newName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+      avatarDiv.textContent = initials;
+
+      saveBtn.textContent = 'Saved!';
+      setTimeout(() => {
+        saveBtn.textContent = 'Save';
+        saveBtn.disabled = false;
+      }, 1500);
+
+      // Refresh leaderboard to show new name
+      loadLeaderboard();
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      alert('Failed to save profile: ' + error.message);
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save';
+    }
+  });
 }
 
 // Try to sign in silently if user exists

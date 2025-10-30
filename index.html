@@ -20,7 +20,7 @@
           <div class="balance-display">
             <span>Balance:</span>
             <span class="balance-value" id="navbar-balance">0</span>
-            <span>FB</span>
+            <span>FATTY BUCKS</span>
           </div>
         </div>
         <div class="navbar-right">
@@ -35,6 +35,7 @@
         <button class="tab-button" data-tab="highlow">High-Low</button>
         <button class="tab-button" data-tab="leaderboard">Leaderboard</button>
         <button class="tab-button" data-tab="history">History</button>
+        <button class="tab-button" data-tab="profile">Profile</button>
       </div>
 
       <!-- Main Content -->
@@ -53,7 +54,7 @@
             <div class="card" style="width: 100%; max-width: 400px;">
               <div class="bet-controls">
                 <div>
-                  <div class="bet-amount" id="wheel-bet-amount">Bet: 10 FB</div>
+                  <div class="bet-amount" id="wheel-bet-amount">Bet: 10 FATTY BUCKS</div>
                   <div class="chip-buttons" id="wheel-chips">
                     <button class="chip-btn selected" data-amount="10">10</button>
                     <button class="chip-btn" data-amount="25">25</button>
@@ -85,7 +86,7 @@
             <div class="card" style="width: 100%; max-width: 400px;">
               <div class="bet-controls">
                 <div>
-                  <div class="bet-amount" id="coinflip-bet-amount">Bet: 10 FB</div>
+                  <div class="bet-amount" id="coinflip-bet-amount">Bet: 10 FATTY BUCKS</div>
                   <div class="chip-buttons" id="coinflip-chips">
                     <button class="chip-btn selected" data-amount="10">10</button>
                     <button class="chip-btn" data-amount="25">25</button>
@@ -120,7 +121,7 @@
             <div class="card" style="width: 100%; max-width: 400px;">
               <div class="bet-controls">
                 <div>
-                  <div class="bet-amount" id="highlow-bet-amount">Bet: 10 FB</div>
+                  <div class="bet-amount" id="highlow-bet-amount">Bet: 10 FATTY BUCKS</div>
                   <div class="chip-buttons" id="highlow-chips">
                     <button class="chip-btn selected" data-amount="10">10</button>
                     <button class="chip-btn" data-amount="25">25</button>
@@ -163,6 +164,49 @@
             </div>
           </div>
         </div>
+
+        <!-- Profile -->
+        <div class="page" id="profile-page">
+          <div style="max-width: 500px; margin: 0 auto;">
+            <h2 style="margin-bottom: var(--spacing-xl);">Your Profile</h2>
+
+            <div class="card" style="text-align: center; padding: var(--spacing-2xl); margin-bottom: var(--spacing-lg);">
+              <div id="profile-avatar" style="width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--gold)); margin: 0 auto var(--spacing-lg); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 700;">
+                ?
+              </div>
+              <p id="profile-uid" style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--spacing-lg);">ID: loading...</p>
+            </div>
+
+            <div class="card" style="margin-bottom: var(--spacing-lg);">
+              <h3 style="margin-bottom: var(--spacing-md);">Display Name</h3>
+              <div style="display: flex; gap: var(--spacing-sm);">
+                <input type="text" id="profile-name-input" placeholder="Enter your name" class="bet-input" style="flex: 1;" />
+                <button class="btn btn-primary" id="profile-save-btn" style="white-space: nowrap;">Save</button>
+              </div>
+            </div>
+
+            <div class="card" style="text-align: center;">
+              <h3 style="margin-bottom: var(--spacing-md);">Stats</h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg); margin-top: var(--spacing-lg);">
+                <div>
+                  <div style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--spacing-sm);">Current Balance</div>
+                  <div id="profile-balance" style="font-size: 1.5rem; font-weight: 700; color: var(--gold);">0</div>
+                </div>
+                <div>
+                  <div style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--spacing-sm);">Best Balance</div>
+                  <div id="profile-best" style="font-size: 1.5rem; font-weight: 700; color: var(--gold);">0</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Result Modal -->
+    <div id="result-modal" class="result-modal">
+      <div class="result-modal-content">
+        <div id="result-modal-inner"></div>
       </div>
     </div>
 

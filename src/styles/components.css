@@ -252,24 +252,84 @@
   border-radius: 50%;
   background: conic-gradient(
     from 0deg,
-    var(--accent) 0deg 120deg,
-    var(--win) 120deg 240deg,
-    var(--gold) 240deg 360deg
+    #FF0000 0deg 18deg,
+    #000000 18deg 36deg,
+    #FF0000 36deg 54deg,
+    #000000 54deg 72deg,
+    #FF0000 72deg 90deg,
+    #000000 90deg 108deg,
+    #FF0000 108deg 126deg,
+    #000000 126deg 144deg,
+    #FF0000 144deg 162deg,
+    #000000 162deg 180deg,
+    #FF0000 180deg 198deg,
+    #000000 198deg 216deg,
+    #FF0000 216deg 234deg,
+    #000000 234deg 252deg,
+    #FF0000 252deg 270deg,
+    #000000 270deg 288deg,
+    #FF0000 288deg 306deg,
+    #000000 306deg 324deg,
+    #FF0000 324deg 342deg,
+    #000000 342deg 360deg
   );
-  box-shadow: 0 8px 32px rgba(10, 132, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(0, 0, 0, 0.3);
   position: relative;
+  border: 3px solid var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wheel::before {
+  content: '';
+  position: absolute;
+  width: 85%;
+  height: 85%;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 0, 0, 0.2) 0deg 18deg,
+    rgba(0, 0, 0, 0.2) 18deg 36deg,
+    rgba(255, 0, 0, 0.2) 36deg 54deg,
+    rgba(0, 0, 0, 0.2) 54deg 72deg,
+    rgba(255, 0, 0, 0.2) 72deg 90deg,
+    rgba(0, 0, 0, 0.2) 90deg 108deg,
+    rgba(255, 0, 0, 0.2) 108deg 126deg,
+    rgba(0, 0, 0, 0.2) 126deg 144deg,
+    rgba(255, 0, 0, 0.2) 144deg 162deg,
+    rgba(0, 0, 0, 0.2) 162deg 180deg,
+    rgba(255, 0, 0, 0.2) 180deg 198deg,
+    rgba(0, 0, 0, 0.2) 198deg 216deg,
+    rgba(255, 0, 0, 0.2) 216deg 234deg,
+    rgba(0, 0, 0, 0.2) 234deg 252deg,
+    rgba(255, 0, 0, 0.2) 252deg 270deg,
+    rgba(0, 0, 0, 0.2) 270deg 288deg,
+    rgba(255, 0, 0, 0.2) 288deg 306deg,
+    rgba(0, 0, 0, 0.2) 306deg 324deg,
+    rgba(255, 0, 0, 0.2) 324deg 342deg,
+    rgba(0, 0, 0, 0.2) 342deg 360deg
+  );
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
 }
 
 .wheel::after {
   content: '';
   position: absolute;
-  width: 20px;
-  height: 20px;
-  background: var(--text);
+  width: 25px;
+  height: 25px;
+  background: var(--gold);
   border-radius: 50%;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  z-index: 10;
+  box-shadow: 0 0 15px rgba(255, 214, 10, 0.6);
 }
 
 .wheel-pointer {
@@ -439,6 +499,81 @@
   width: 90%;
   box-shadow: 0 20px 64px rgba(0, 0, 0, 0.5);
   animation: slide-in-up var(--duration-base) var(--easing-in-out);
+}
+
+/* Result Modal */
+.result-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+}
+
+.result-modal.show {
+  display: flex;
+  animation: fade-in 300ms var(--easing-in-out);
+}
+
+.result-modal-content {
+  text-align: center;
+  animation: scale-up 400ms var(--easing-in-out);
+}
+
+@keyframes scale-up {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.result-modal-title {
+  font-size: 4rem;
+  font-weight: 700;
+  margin-bottom: var(--spacing-lg);
+  animation: bounce-in 500ms var(--easing-in-out);
+}
+
+@keyframes bounce-in {
+  0% {
+    transform: scale(0.5);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.result-modal-amount {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-top: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.result-modal-details {
+  font-size: var(--font-size-lg);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-lg);
+}
+
+.result-modal-button {
+  margin-top: var(--spacing-xl);
+  padding: var(--spacing-lg) var(--spacing-2xl);
+  font-size: var(--font-size-lg);
 }
 
 /* Responsive */

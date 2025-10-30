@@ -16,7 +16,7 @@ export function initWheel() {
       btn.classList.add('selected');
       currentBet = parseInt(btn.dataset.amount);
       customInput.value = '';
-      betDisplay.textContent = `Bet: ${currentBet} FB`;
+      betDisplay.textContent = `Bet: ${currentBet} FATTY BUCKS`;
     });
   });
 
@@ -26,7 +26,7 @@ export function initWheel() {
     if (value > 0) {
       chipButtons.forEach(b => b.classList.remove('selected'));
       currentBet = value;
-      betDisplay.textContent = `Bet: ${currentBet} FB`;
+      betDisplay.textContent = `Bet: ${currentBet} FATTY BUCKS`;
     }
   });
 
@@ -62,7 +62,7 @@ async function playGame() {
     await new Promise(resolve => setTimeout(resolve, 4000));
 
     // Show result
-    displayResult(result.data, resultDiv);
+    displayResult(result.data);
 
     // Update balance display
     updateBalance(result.data.balanceAfter);
@@ -75,25 +75,27 @@ async function playGame() {
   }
 }
 
-function displayResult(data, resultDiv) {
+function displayResult(data) {
   const isWin = data.payout > 0;
-  const resultClass = isWin ? 'result-win' : 'result-lose';
   const title = isWin ? '🎉 WIN!' : '❌ LOSE';
-  const amount = isWin ? `+${data.payout} FB` : `-${data.wager} FB`;
+  const amount = isWin ? `+${data.payout} FATTY BUCKS` : `-${data.wager} FATTY BUCKS`;
+  const textColor = isWin ? 'var(--win)' : 'var(--lose)';
 
-  resultDiv.innerHTML = `
-    <div class="${resultClass}">
-      <div class="result-title">${title}</div>
-      <div class="result-amount">${amount}</div>
+  const modal = document.getElementById('result-modal');
+  const modalInner = document.getElementById('result-modal-inner');
+
+  modalInner.innerHTML = `
+    <div class="result-modal-content">
+      <div class="result-modal-title" style="color: ${textColor};">${title}</div>
+      <div class="result-modal-amount" style="color: ${textColor};">${amount}</div>
+      <div class="result-modal-details">You now have ${data.balanceAfter.toLocaleString()} FATTY BUCKS</div>
+      <button class="btn btn-primary result-modal-button" onclick="document.getElementById('result-modal').classList.remove('show')">Continue</button>
     </div>
   `;
 
-  resultDiv.classList.add('show');
+  modal.classList.add('show');
   if (isWin) {
-    resultDiv.classList.add('flash-win');
     playConfetti();
-  } else {
-    resultDiv.classList.add('flash-lose');
   }
 }
 
