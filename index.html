@@ -2,12 +2,170 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>fatty-casino</title>
+    <title>FATTY CASINO - Play & Win</title>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/src/styles/tokens.css" />
+    <link rel="stylesheet" href="/src/styles/base.css" />
+    <link rel="stylesheet" href="/src/styles/animations.css" />
+    <link rel="stylesheet" href="/src/styles/components.css" />
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <!-- Navbar -->
+      <nav class="navbar">
+        <div class="navbar-brand">🎰 FATTY CASINO</div>
+        <div class="navbar-center">
+          <div class="balance-display">
+            <span>Balance:</span>
+            <span class="balance-value" id="navbar-balance">0</span>
+            <span>FB</span>
+          </div>
+        </div>
+        <div class="navbar-right">
+          <button class="btn btn-secondary" id="signin-btn">Sign In</button>
+        </div>
+      </nav>
+
+      <!-- Tabs -->
+      <div class="tabs" id="tabs">
+        <button class="tab-button active" data-tab="wheel">Wheel</button>
+        <button class="tab-button" data-tab="coinflip">Coin Flip</button>
+        <button class="tab-button" data-tab="highlow">High-Low</button>
+        <button class="tab-button" data-tab="leaderboard">Leaderboard</button>
+        <button class="tab-button" data-tab="history">History</button>
+      </div>
+
+      <!-- Main Content -->
+      <div class="main-content">
+        <!-- Wheel Game -->
+        <div class="page active" id="wheel-page">
+          <div class="game-container">
+            <h2>Lucky Wheel</h2>
+            <div class="game-display" id="wheel-display">
+              <div class="wheel-container">
+                <div class="wheel-pointer"></div>
+                <div class="wheel" id="wheel"></div>
+              </div>
+            </div>
+
+            <div class="card" style="width: 100%; max-width: 400px;">
+              <div class="bet-controls">
+                <div>
+                  <div class="bet-amount" id="wheel-bet-amount">Bet: 10 FB</div>
+                  <div class="chip-buttons" id="wheel-chips">
+                    <button class="chip-btn selected" data-amount="10">10</button>
+                    <button class="chip-btn" data-amount="25">25</button>
+                    <button class="chip-btn" data-amount="50">50</button>
+                    <button class="chip-btn" data-amount="100">100</button>
+                    <button class="chip-btn" data-amount="250">250</button>
+                    <button class="chip-btn" data-amount="500">500</button>
+                  </div>
+                </div>
+                <div class="bet-input-group">
+                  <input type="number" class="bet-input" id="wheel-custom-bet" placeholder="Custom amount" min="1" />
+                </div>
+                <button class="btn btn-primary btn-play" id="wheel-play" style="width: 100%;">SPIN</button>
+              </div>
+            </div>
+
+            <div class="result-display" id="wheel-result"></div>
+          </div>
+        </div>
+
+        <!-- Coin Flip Game -->
+        <div class="page" id="coinflip-page">
+          <div class="game-container">
+            <h2>Coin Flip</h2>
+            <div class="game-display" id="coinflip-display">
+              <div class="coin" id="coin">H</div>
+            </div>
+
+            <div class="card" style="width: 100%; max-width: 400px;">
+              <div class="bet-controls">
+                <div>
+                  <div class="bet-amount" id="coinflip-bet-amount">Bet: 10 FB</div>
+                  <div class="chip-buttons" id="coinflip-chips">
+                    <button class="chip-btn selected" data-amount="10">10</button>
+                    <button class="chip-btn" data-amount="25">25</button>
+                    <button class="chip-btn" data-amount="50">50</button>
+                    <button class="chip-btn" data-amount="100">100</button>
+                    <button class="chip-btn" data-amount="250">250</button>
+                    <button class="chip-btn" data-amount="500">500</button>
+                  </div>
+                </div>
+                <div class="bet-input-group">
+                  <input type="number" class="bet-input" id="coinflip-custom-bet" placeholder="Custom amount" min="1" />
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-sm);">
+                  <button class="btn btn-secondary" id="coinflip-heads" style="width: 100%;">Heads</button>
+                  <button class="btn btn-secondary" id="coinflip-tails" style="width: 100%;">Tails</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="result-display" id="coinflip-result"></div>
+          </div>
+        </div>
+
+        <!-- High-Low Game -->
+        <div class="page" id="highlow-page">
+          <div class="game-container">
+            <h2>High-Low</h2>
+            <div class="game-display" id="highlow-display">
+              <div id="highlow-card-display" style="font-size: 4rem;">?</div>
+            </div>
+
+            <div class="card" style="width: 100%; max-width: 400px;">
+              <div class="bet-controls">
+                <div>
+                  <div class="bet-amount" id="highlow-bet-amount">Bet: 10 FB</div>
+                  <div class="chip-buttons" id="highlow-chips">
+                    <button class="chip-btn selected" data-amount="10">10</button>
+                    <button class="chip-btn" data-amount="25">25</button>
+                    <button class="chip-btn" data-amount="50">50</button>
+                    <button class="chip-btn" data-amount="100">100</button>
+                    <button class="chip-btn" data-amount="250">250</button>
+                    <button class="chip-btn" data-amount="500">500</button>
+                  </div>
+                </div>
+                <div class="bet-input-group">
+                  <input type="number" class="bet-input" id="highlow-custom-bet" placeholder="Custom amount" min="1" />
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-sm);">
+                  <button class="btn btn-secondary" id="highlow-high" style="width: 100%;">HIGH</button>
+                  <button class="btn btn-secondary" id="highlow-low" style="width: 100%;">LOW</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="result-display" id="highlow-result"></div>
+          </div>
+        </div>
+
+        <!-- Leaderboard -->
+        <div class="page" id="leaderboard-page">
+          <div style="max-width: 600px; margin: 0 auto;">
+            <h2 style="margin-bottom: var(--spacing-lg);">Top Players</h2>
+            <div class="leaderboard-list" id="leaderboard-list">
+              <div class="card" style="text-align: center;">Loading leaderboard...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- History -->
+        <div class="page" id="history-page">
+          <div style="max-width: 600px; margin: 0 auto;">
+            <h2 style="margin-bottom: var(--spacing-lg);">Game History</h2>
+            <div class="leaderboard-list" id="history-list">
+              <div class="card" style="text-align: center;">No game history yet.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

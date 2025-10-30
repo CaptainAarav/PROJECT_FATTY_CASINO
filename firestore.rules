@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================
+    // HELPER FUNCTIONS
+    // ============================================================
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if user owns the document
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+
+    // ============================================================
+    // USERS COLLECTION
+    // ============================================================
+
+    match /users/{uid} {
+      // Only owner can read their own document
+      allow read: if isOwner(uid);
+
+      // No direct writes - only via Cloud Functions
+      allow write: if false;
+
+      // Collection rules for user's game history
+      match /gameHistory/{game=**} {
+        allow read: if isOwner(uid);
+        allow write: if false;
+      }
+    }
+
+    // ============================================================
+    // TRANSACTIONS COLLECTION
+    // ============================================================
+
+    match /transactions/{transaction} {
+      // Only authenticated users can read
+      allow read: if isAuthenticated() && request.auth.uid == resource.data.uid;
+
+      // No direct writes
+      allow write: if false;
+    }
+
+    // ============================================================
+    // LEADERBOARD COLLECTION
+    // ============================================================
+
+    match /leaderboard/{uid} {
+      // Anyone can read the leaderboard
+      allow read: if isAuthenticated();
+
+      // No direct writes - only via Cloud Functions
+      allow write: if false;
+    }
+
+    // ============================================================
+    // GAME HISTORY COLLECTION
+    // ============================================================
+
+    match /gameHistory/{uid}/{document=**} {
+      // Only the owner can read their history
+      allow read: if isOwner(uid);
+
+      // No direct writes
+      allow write: if false;
+    }
+
+    // ============================================================
+    // DEFAULT DENY
+    // ============================================================
+
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

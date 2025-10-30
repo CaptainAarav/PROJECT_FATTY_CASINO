@@ -1,0 +1,158 @@
+/* Wheel Animations */
+@keyframes spin-wheel {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.wheel-spinning {
+  animation: spin-wheel 4s cubic-bezier(0.25, 0.46, 0.45, 0.94) 1;
+}
+
+/* Coin Flip Animations */
+@keyframes flip-coin {
+  0% {
+    transform: rotateY(0deg);
+  }
+  50% {
+    transform: rotateY(1800deg);
+  }
+  100% {
+    transform: rotateY(3600deg);
+  }
+}
+
+.coin-flipping {
+  animation: flip-coin 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) 1;
+}
+
+/* Balance Count Up */
+@keyframes count-up {
+  from {
+    opacity: 0.7;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.balance-update {
+  animation: count-up var(--duration-base) var(--easing-in-out);
+}
+
+/* Win Celebration */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.bounce-animation {
+  animation: bounce 0.6s var(--easing-in-out);
+}
+
+/* Confetti */
+@keyframes confetti-fall {
+  to {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.confetti {
+  position: fixed;
+  pointer-events: none;
+  animation: confetti-fall 2.5s ease-out forwards;
+}
+
+/* Pulse (Loading) */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.pulse {
+  animation: pulse 2s var(--easing-in-out) infinite;
+}
+
+/* Fade In/Out */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.fade-in {
+  animation: fade-in var(--duration-base) var(--easing-in-out);
+}
+
+.fade-out {
+  animation: fade-out var(--duration-base) var(--easing-in-out);
+}
+
+/* Slide In */
+@keyframes slide-in-up {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.slide-in-up {
+  animation: slide-in-up var(--duration-base) var(--easing-in-out);
+}
+
+/* Color Flash */
+@keyframes flash-win {
+  0%, 100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: rgba(52, 199, 89, 0.2);
+  }
+}
+
+.flash-win {
+  animation: flash-win var(--duration-base) var(--easing-in-out);
+}
+
+@keyframes flash-lose {
+  0%, 100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: rgba(255, 59, 48, 0.2);
+  }
+}
+
+.flash-lose {
+  animation: flash-lose var(--duration-base) var(--easing-in-out);
+}
