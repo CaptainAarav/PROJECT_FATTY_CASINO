@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  base: '/PROJECT_FATTY_CASINO/',
+  base: '/',
   build: {
     outDir: 'dist',
     assetsDir: 'assets'
