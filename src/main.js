@@ -1380,5 +1380,19 @@ class FattyCasino {
   }
 }
 
-// Initialize the casino
-new FattyCasino()
+// Initialize the casino with error handling
+try {
+  new FattyCasino()
+} catch (error) {
+  console.error('Failed to initialize FATTY CASINO:', error)
+  document.querySelector('#app').innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #0a0a0a; color: #fff; text-align: center; padding: 2rem;">
+      <div>
+        <h1 style="color: #ffd700; font-size: 2rem; margin-bottom: 1rem;">🎰 FATTY CASINO</h1>
+        <p style="color: #ff4444; margin-bottom: 1rem;">Failed to initialize application</p>
+        <p style="color: #a0a0a0; font-size: 0.9rem;">Check console for details</p>
+        <pre style="background: #1a1a1a; padding: 1rem; border-radius: 8px; text-align: left; overflow-x: auto; margin-top: 1rem;">${error.message}</pre>
+      </div>
+    </div>
+  `
+}
