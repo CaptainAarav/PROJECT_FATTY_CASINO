@@ -81,7 +81,7 @@ class FattyCasino {
 
       if (userData) {
         // Load existing user data
-        this.balance = userData.balance || 10000
+        this.balance = userData.balance !== undefined ? userData.balance : 10000
         this.profile = {
           username: userData.username || this.user.displayName || 'Player',
           avatar: userData.avatar || '🎰',
@@ -1012,7 +1012,6 @@ class FattyCasino {
 
           <div class="text-center mt-2" style="display: flex; flex-direction: column; gap: 1rem;">
             <button class="btn btn-primary" id="save-profile">Save Profile</button>
-            <button class="btn btn-secondary" id="reset-balance">Reset Balance to 10,000 FATTY BUCKS</button>
             <button class="btn btn-secondary" id="sign-out-btn-profile">Sign Out</button>
             <button class="btn" id="delete-account-btn" style="background: var(--accent-red); color: white;">Delete Account</button>
           </div>
@@ -1153,15 +1152,6 @@ class FattyCasino {
         this.saveUserData()
         this.showMessage('Profile saved!')
         this.render()
-      })
-
-      document.getElementById('reset-balance')?.addEventListener('click', async () => {
-        if (confirm('Are you sure you want to reset your balance to 10,000 FATTY BUCKS?')) {
-          this.balance = 10000
-          await this.saveUserData()
-          this.updateWallet()
-          this.showMessage('Balance reset to 10,000 FATTY BUCKS!')
-        }
       })
 
       // Sign out button in profile
