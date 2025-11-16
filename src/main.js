@@ -33,6 +33,7 @@ class FattyCasino {
       winStreak: 0,
       currentStreak: 0
     }
+    this.lastDailyBonus = null
     this.leaderboard = []
     this.leaderboardInterval = null
     this.leaderboardTimerInterval = null
@@ -88,6 +89,7 @@ class FattyCasino {
           theme: userData.theme || 'gold'
         }
         this.stats = userData.stats || this.stats
+        this.lastDailyBonus = userData.lastDailyBonus || null
       } else {
         // Create new user profile
         await this.createNewUserProfile(userId)
@@ -187,12 +189,38 @@ class FattyCasino {
         profileImage: this.profile.profileImage,
         theme: this.profile.theme,
         balance: this.balance,
-        stats: this.stats
+        stats: this.stats,
+        lastDailyBonus: this.lastDailyBonus
       })
     } catch (error) {
       console.error('Error saving user data:', error)
       this.showMessage('Error saving data', 'error')
     }
+  }
+
+  canClaimDailyBonus() {
+    if (!this.lastDailyBonus) return true
+    const now = new Date()
+    const lastClaim = new Date(this.lastDailyBonus)
+    const hoursSince = (now - lastClaim) / (1000 * 60 * 60)
+    return hoursSince >= 24
+  }
+
+  async claimDailyBonus() {
+    if (!this.canClaimDailyBonus()) {
+      const now = new Date()
+      const lastClaim = new Date(this.lastDailyBonus)
+      const hoursRemaining = 24 - ((now - lastClaim) / (1000 * 60 * 60))
+      this.showMessage(`Daily bonus available in ${Math.ceil(hoursRemaining)} hours!`, 'error')
+      return
+    }
+
+    this.balance += 1000
+    this.lastDailyBonus = new Date().toISOString()
+    await this.saveUserData()
+    this.updateWallet()
+    this.showMessage('🎁 Claimed 1,000 FATTY BUCKS! Come back in 24 hours for more!', 'success')
+    this.render()
   }
 
   async handleGoogleSignIn() {
@@ -562,9 +590,16 @@ class FattyCasino {
     document.querySelector('#app').innerHTML = `
       <div class="header" style="display: flex; justify-content: space-between; align-items: center;">
         <h1>🎰 FATTY CASINO</h1>
-        <div class="wallet" style="flex: 1; display: flex; justify-content: center; max-width: 400px; margin: 0 auto;">
-          <span>💵</span>
-          <span class="wallet-amount">${this.balance.toLocaleString()} FATTY BUCKS</span>
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; max-width: 400px; margin: 0 auto; gap: 0.5rem;">
+          <div class="wallet" style="display: flex; align-items: center;">
+            <span>💵</span>
+            <span class="wallet-amount">${this.balance.toLocaleString()} FATTY BUCKS</span>
+          </div>
+          ${this.balance <= 100 ? `
+            <button id="daily-bonus-btn" class="btn ${this.canClaimDailyBonus() ? 'btn-primary' : 'btn-secondary'}" style="padding: 0.5rem 1rem; font-size: 0.85rem; animation: pulse 2s infinite;">
+              ${this.canClaimDailyBonus() ? '🎁 Claim 1,000 Free FATTY BUCKS!' : '⏳ Daily Bonus (Come back later)'}
+            </button>
+          ` : ''}
         </div>
         <div id="profile-header-btn" style="display: flex; align-items: center; gap: 0.8rem; cursor: pointer; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.3s ease;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'">
           ${this.profile.profileImage ?
@@ -987,6 +1022,11 @@ class FattyCasino {
   }
 
   attachEventListeners() {
+    // Daily bonus button
+    document.getElementById('daily-bonus-btn')?.addEventListener('click', () => {
+      this.claimDailyBonus()
+    })
+
     // Games dropdown toggle
     const gamesDropdownBtn = document.getElementById('games-dropdown-btn')
     const gamesDropdown = document.getElementById('games-dropdown')
