@@ -123,6 +123,11 @@ class FattyCasino {
     this.dailyQuests = []
     this.vipTier = 'Bronze'
     this.inventory = []
+    // New games state
+    this.blackjackHand = { player: [], dealer: [], bet: 0, gameActive: false }
+    this.crashMultiplier = 1.00
+    this.crashActive = false
+    this.plinkoDropping = false
     this.init()
   }
 
@@ -858,12 +863,15 @@ class FattyCasino {
       <nav class="nav">
         <button class="nav-btn ${this.currentView === 'home' ? 'active' : ''}" data-view="home">🏠 Home</button>
         <div style="position: relative; display: inline-block;">
-          <button class="nav-btn ${['coinflip', 'roulette', 'slots', 'dice'].includes(this.currentView) ? 'active' : ''}" id="games-dropdown-btn">🎮 Games ▼</button>
+          <button class="nav-btn ${['coinflip', 'roulette', 'slots', 'dice', 'blackjack', 'crash', 'plinko'].includes(this.currentView) ? 'active' : ''}" id="games-dropdown-btn">🎮 Games ▼</button>
           <div id="games-dropdown" style="display: ${this.gamesDropdownOpen ? 'block' : 'none'}; position: absolute; top: 100%; left: 0; background: var(--bg-secondary); border: 2px solid var(--border); border-radius: 8px; margin-top: 0.5rem; min-width: 200px; z-index: 10000; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);">
             <button class="nav-btn ${this.currentView === 'coinflip' ? 'active' : ''}" data-view="coinflip" style="width: 100%; text-align: left; border: none; border-radius: 4px; margin: 0;">🪙 Coin Flip</button>
             <button class="nav-btn ${this.currentView === 'roulette' ? 'active' : ''}" data-view="roulette" style="width: 100%; text-align: left; border: none; border-radius: 4px; margin: 0;">🎡 Roulette</button>
             <button class="nav-btn ${this.currentView === 'slots' ? 'active' : ''}" data-view="slots" style="width: 100%; text-align: left; border: none; border-radius: 4px; margin: 0;">🎰 Slots</button>
             <button class="nav-btn ${this.currentView === 'dice' ? 'active' : ''}" data-view="dice" style="width: 100%; text-align: left; border: none; border-radius: 4px; margin: 0;">🎲 Dice</button>
+            <button class="nav-btn ${this.currentView === 'blackjack' ? 'active' : ''}" data-view="blackjack" style="width: 100%; text-align: left; border: none; border-radius: 4px; margin: 0;">🃏 Blackjack</button>
+            <button class="nav-btn ${this.currentView === 'crash' ? 'active' : ''}" data-view="crash" style="width: 100%; text-align: left; border: none; border-radius: 4px; margin: 0;">🚀 Crash</button>
+            <button class="nav-btn ${this.currentView === 'plinko' ? 'active' : ''}" data-view="plinko" style="width: 100%; text-align: left; border: none; border-radius: 4px; margin: 0;">⚪ Plinko</button>
           </div>
         </div>
         <button class="nav-btn ${this.currentView === 'leaderboard' ? 'active' : ''}" data-view="leaderboard">🏆 Leaderboard</button>
@@ -982,6 +990,9 @@ class FattyCasino {
       case 'roulette': return this.renderRoulette()
       case 'slots': return this.renderSlots()
       case 'dice': return this.renderDice()
+      case 'blackjack': return this.renderBlackjack()
+      case 'crash': return this.renderCrash()
+      case 'plinko': return this.renderPlinko()
       case 'leaderboard': return this.renderLeaderboard()
       case 'stats': return this.renderStats()
       case 'profile': return this.renderProfile()
@@ -1122,6 +1133,163 @@ class FattyCasino {
         <div class="flex flex-center gap-1" style="flex-direction: column;">
           <input type="number" id="bet-amount" placeholder="Enter bet amount" min="1" max="${this.balance}" value="100">
           <button class="btn btn-primary" id="roll-dice">Roll Dice!</button>
+        </div>
+      </div>
+    `
+  }
+
+  renderBlackjack() {
+    const getCardDisplay = (card) => {
+      const suits = { hearts: '♥️', diamonds: '♦️', clubs: '♣️', spades: '♠️' }
+      return `${card.value}${suits[card.suit]}`
+    }
+
+    const calculateHand = (cards) => {
+      let sum = 0
+      let aces = 0
+      cards.forEach(card => {
+        if (card.value === 'A') {
+          aces++
+          sum += 11
+        } else if (['K', 'Q', 'J'].includes(card.value)) {
+          sum += 10
+        } else {
+          sum += parseInt(card.value)
+        }
+      })
+      while (sum > 21 && aces > 0) {
+        sum -= 10
+        aces--
+      }
+      return sum
+    }
+
+    const playerValue = this.blackjackHand.player.length > 0 ? calculateHand(this.blackjackHand.player) : 0
+    const dealerValue = this.blackjackHand.dealer.length > 0 ? calculateHand(this.blackjackHand.dealer) : 0
+
+    return `
+      <div class="game-container">
+        <h2 class="text-center mb-2">🃏 Blackjack</h2>
+        <p class="text-center mb-2" style="color: var(--text-secondary);">
+          Get as close to 21 as possible without going over!
+        </p>
+
+        <div style="background: var(--bg-tertiary); border: 2px solid var(--border); border-radius: 12px; padding: 2rem; margin-bottom: 2rem;">
+          <!-- Dealer's Hand -->
+          <div style="margin-bottom: 2rem;">
+            <h3 style="color: var(--accent-gold); text-align: center; margin-bottom: 1rem;">
+              Dealer ${this.blackjackHand.gameActive && this.blackjackHand.dealer.length === 2 ? '(?)' : `(${dealerValue})`}
+            </h3>
+            <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+              ${this.blackjackHand.dealer.map((card, i) => `
+                <div style="width: 80px; height: 120px; background: ${this.blackjackHand.gameActive && i === 1 ? '#333' : 'white'}; border: 3px solid var(--accent-gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 700; color: ${['hearts', 'diamonds'].includes(card.suit) ? '#e74c3c' : '#000'};">
+                  ${this.blackjackHand.gameActive && i === 1 ? '🂠' : getCardDisplay(card)}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Player's Hand -->
+          <div>
+            <h3 style="color: var(--accent-gold); text-align: center; margin-bottom: 1rem;">You (${playerValue})</h3>
+            <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+              ${this.blackjackHand.player.map(card => `
+                <div style="width: 80px; height: 120px; background: white; border: 3px solid var(--accent-gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 700; color: ${['hearts', 'diamonds'].includes(card.suit) ? '#e74c3c' : '#000'};">
+                  ${getCardDisplay(card)}
+                </div>
+              `).join('')}
+              ${this.blackjackHand.player.length === 0 ? '<p style="color: var(--text-secondary);">Place a bet to start!</p>' : ''}
+            </div>
+          </div>
+        </div>
+
+        ${!this.blackjackHand.gameActive ? `
+          <div style="display: flex; flex-direction: column; gap: 1rem; align-items: center;">
+            <input type="number" id="blackjack-bet" placeholder="Enter bet amount" min="1" max="${this.balance}" value="100" style="max-width: 300px;">
+            <button class="btn btn-primary" id="blackjack-deal">Deal Cards</button>
+          </div>
+        ` : `
+          <div style="display: flex; justify-content: center; gap: 1rem;">
+            <button class="btn btn-primary" id="blackjack-hit">Hit</button>
+            <button class="btn btn-secondary" id="blackjack-stand">Stand</button>
+          </div>
+        `}
+      </div>
+    `
+  }
+
+  renderCrash() {
+    return `
+      <div class="game-container">
+        <h2 class="text-center mb-2">🚀 Crash</h2>
+        <p class="text-center mb-2" style="color: var(--text-secondary);">
+          Cash out before the rocket crashes! Multiplier increases over time.
+        </p>
+
+        <div style="background: var(--bg-tertiary); border: 2px solid var(--border); border-radius: 12px; padding: 3rem 2rem; text-align: center; margin-bottom: 2rem;">
+          <div style="font-size: 5rem; font-weight: 900; background: linear-gradient(135deg, var(--accent-gold), #ffed4e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1rem;">
+            ${this.crashMultiplier.toFixed(2)}x
+          </div>
+          <div style="font-size: 3rem; margin-bottom: 1rem;">
+            ${this.crashActive ? '🚀' : '💥'}
+          </div>
+          <div style="color: var(--text-secondary);">
+            ${this.crashActive ? 'Rocket is flying...' : 'Waiting to launch...'}
+          </div>
+        </div>
+
+        ${!this.crashActive ? `
+          <div style="display: flex; flex-direction: column; gap: 1rem; align-items: center;">
+            <input type="number" id="crash-bet" placeholder="Enter bet amount" min="1" max="${this.balance}" value="100" style="max-width: 300px;">
+            <button class="btn btn-primary" id="crash-start">Start Rocket 🚀</button>
+          </div>
+        ` : `
+          <div style="text-align: center;">
+            <button class="btn btn-green" id="crash-cashout" style="font-size: 1.2rem; padding: 1rem 2rem;">Cash Out (${(this.crashMultiplier * parseInt(document.getElementById('crash-bet')?.value || 100)).toFixed(0)} FATTY BUCKS)</button>
+          </div>
+        `}
+      </div>
+    `
+  }
+
+  renderPlinko() {
+    return `
+      <div class="game-container">
+        <h2 class="text-center mb-2">⚪ Plinko</h2>
+        <p class="text-center mb-2" style="color: var(--text-secondary);">
+          Drop the ball and watch it bounce! Land in high multiplier slots to win big!
+        </p>
+
+        <div style="background: var(--bg-tertiary); border: 2px solid var(--border); border-radius: 12px; padding: 2rem; margin-bottom: 2rem;">
+          <!-- Plinko Board Visual -->
+          <div style="position: relative; height: 400px; background: var(--bg-secondary); border-radius: 12px; overflow: hidden;">
+            <svg width="100%" height="100%" style="display: block;">
+              <!-- Pegs -->
+              ${Array.from({length: 8}, (_, row) =>
+                Array.from({length: row + 3}, (_, col) => {
+                  const x = (col + 1) * (100 / (row + 4)) + '%'
+                  const y = (row + 1) * 45 + 'px'
+                  return `<circle cx="${x}" cy="${y}" r="4" fill="var(--accent-gold)" />`
+                }).join('')
+              ).join('')}
+            </svg>
+
+            <!-- Multiplier Slots at Bottom -->
+            <div style="position: absolute; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; padding: 0.5rem;">
+              ${[0.5, 1, 1.5, 2, 3, 5, 3, 2, 1.5, 1, 0.5].map(mult => `
+                <div style="flex: 1; background: ${mult >= 3 ? 'var(--accent-green)' : mult >= 2 ? 'var(--accent-gold)' : 'var(--accent-red)'}; color: white; padding: 0.5rem; text-align: center; font-weight: 700; font-size: 0.9rem; border-radius: 4px; margin: 0 2px;">
+                  ${mult}x
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem; align-items: center;">
+          <input type="number" id="plinko-bet" placeholder="Enter bet amount" min="1" max="${this.balance}" value="100" style="max-width: 300px;">
+          <button class="btn btn-primary" id="plinko-drop" ${this.plinkoDropping ? 'disabled' : ''}>
+            ${this.plinkoDropping ? 'Dropping...' : 'Drop Ball ⚪'}
+          </button>
         </div>
       </div>
     `
@@ -1612,6 +1780,24 @@ class FattyCasino {
       document.getElementById('roll-dice')?.addEventListener('click', () => this.playDice())
     }
 
+    // Blackjack
+    if (this.currentView === 'blackjack') {
+      document.getElementById('blackjack-deal')?.addEventListener('click', () => this.dealBlackjack())
+      document.getElementById('blackjack-hit')?.addEventListener('click', () => this.hitBlackjack())
+      document.getElementById('blackjack-stand')?.addEventListener('click', () => this.standBlackjack())
+    }
+
+    // Crash
+    if (this.currentView === 'crash') {
+      document.getElementById('crash-start')?.addEventListener('click', () => this.startCrash())
+      document.getElementById('crash-cashout')?.addEventListener('click', () => this.cashoutCrash())
+    }
+
+    // Plinko
+    if (this.currentView === 'plinko') {
+      document.getElementById('plinko-drop')?.addEventListener('click', () => this.dropPlinko())
+    }
+
     // Profile
     if (this.currentView === 'profile') {
       // Profile image upload
@@ -1921,6 +2107,196 @@ class FattyCasino {
         })
       })
     }
+  }
+
+  // New game methods
+  createDeck() {
+    const suits = ['hearts', 'diamonds', 'clubs', 'spades']
+    const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+    const deck = []
+    for (const suit of suits) {
+      for (const value of values) {
+        deck.push({ suit, value })
+      }
+    }
+    return deck.sort(() => Math.random() - 0.5)
+  }
+
+  calculateBlackjackHand(cards) {
+    let sum = 0
+    let aces = 0
+    cards.forEach(card => {
+      if (card.value === 'A') {
+        aces++
+        sum += 11
+      } else if (['K', 'Q', 'J'].includes(card.value)) {
+        sum += 10
+      } else {
+        sum += parseInt(card.value)
+      }
+    })
+    while (sum > 21 && aces > 0) {
+      sum -= 10
+      aces--
+    }
+    return sum
+  }
+
+  dealBlackjack() {
+    const betAmount = parseInt(document.getElementById('blackjack-bet')?.value || 0)
+    if (!betAmount || betAmount < 1 || betAmount > this.balance) {
+      this.showMessage('Invalid bet amount!', 'error')
+      return
+    }
+
+    this.balance -= betAmount
+    this.updateWallet()
+
+    const deck = this.createDeck()
+    this.blackjackHand = {
+      player: [deck.pop(), deck.pop()],
+      dealer: [deck.pop(), deck.pop()],
+      bet: betAmount,
+      gameActive: true,
+      deck
+    }
+
+    const playerValue = this.calculateBlackjackHand(this.blackjackHand.player)
+    if (playerValue === 21) {
+      setTimeout(() => this.standBlackjack(), 500)
+    }
+
+    this.render()
+  }
+
+  hitBlackjack() {
+    if (!this.blackjackHand.gameActive) return
+
+    this.blackjackHand.player.push(this.blackjackHand.deck.pop())
+    const playerValue = this.calculateBlackjackHand(this.blackjackHand.player)
+
+    if (playerValue > 21) {
+      // Bust
+      this.blackjackHand.gameActive = false
+      this.updateStats(this.blackjackHand.bet, 0, false)
+      this.showMessage(`Bust! You lost ${this.blackjackHand.bet.toLocaleString()} FATTY BUCKS!`, 'error')
+      this.blackjackHand = { player: [], dealer: [], bet: 0, gameActive: false }
+    }
+
+    this.render()
+  }
+
+  standBlackjack() {
+    if (!this.blackjackHand.gameActive) return
+
+    this.blackjackHand.gameActive = false
+    const playerValue = this.calculateBlackjackHand(this.blackjackHand.player)
+    let dealerValue = this.calculateBlackjackHand(this.blackjackHand.dealer)
+
+    // Dealer draws until 17
+    while (dealerValue < 17) {
+      this.blackjackHand.dealer.push(this.blackjackHand.deck.pop())
+      dealerValue = this.calculateBlackjackHand(this.blackjackHand.dealer)
+    }
+
+    const bet = this.blackjackHand.bet
+
+    if (dealerValue > 21 || playerValue > dealerValue) {
+      // Player wins
+      const winnings = bet * 2
+      this.balance += winnings
+      this.updateStats(bet, winnings, true)
+      this.showMessage(`You won ${winnings.toLocaleString()} FATTY BUCKS!`, 'success')
+    } else if (playerValue === dealerValue) {
+      // Push
+      this.balance += bet
+      this.showMessage('Push! Bet returned.', 'success')
+    } else {
+      // Dealer wins
+      this.updateStats(bet, 0, false)
+      this.showMessage(`Dealer wins! You lost ${bet.toLocaleString()} FATTY BUCKS!`, 'error')
+    }
+
+    this.blackjackHand = { player: [], dealer: [], bet: 0, gameActive: false }
+    this.render()
+  }
+
+  startCrash() {
+    const betAmount = parseInt(document.getElementById('crash-bet')?.value || 0)
+    if (!betAmount || betAmount < 1 || betAmount > this.balance) {
+      this.showMessage('Invalid bet amount!', 'error')
+      return
+    }
+
+    this.balance -= betAmount
+    this.updateWallet()
+
+    this.crashMultiplier = 1.00
+    this.crashActive = true
+    this.crashBet = betAmount
+    this.crashTarget = 1 + Math.random() * 9 // Crash between 1x and 10x
+
+    const interval = setInterval(() => {
+      if (this.crashMultiplier >= this.crashTarget) {
+        // Crash!
+        clearInterval(interval)
+        this.crashActive = false
+        this.updateStats(betAmount, 0, false)
+        this.showMessage(`Crashed at ${this.crashMultiplier.toFixed(2)}x! You lost ${betAmount.toLocaleString()} FATTY BUCKS!`, 'error')
+        this.render()
+      } else {
+        this.crashMultiplier += 0.01
+        const multiplierEl = document.querySelector('.crash-multiplier')
+        if (multiplierEl) {
+          multiplierEl.textContent = `${this.crashMultiplier.toFixed(2)}x`
+        }
+      }
+    }, 100)
+  }
+
+  cashoutCrash() {
+    if (!this.crashActive) return
+
+    const winnings = Math.floor(this.crashBet * this.crashMultiplier)
+    this.balance += winnings
+    this.crashActive = false
+    this.updateStats(this.crashBet, winnings, true)
+    this.showMessage(`Cashed out at ${this.crashMultiplier.toFixed(2)}x! Won ${winnings.toLocaleString()} FATTY BUCKS!`, 'success')
+    this.render()
+  }
+
+  dropPlinko() {
+    const betAmount = parseInt(document.getElementById('plinko-bet')?.value || 0)
+    if (!betAmount || betAmount < 1 || betAmount > this.balance) {
+      this.showMessage('Invalid bet amount!', 'error')
+      return
+    }
+
+    this.balance -= betAmount
+    this.updateWallet()
+    this.plinkoDropping = true
+    this.render()
+
+    // Simulate ball drop
+    setTimeout(() => {
+      const multipliers = [0.5, 1, 1.5, 2, 3, 5, 3, 2, 1.5, 1, 0.5]
+      const slot = Math.floor(Math.random() * multipliers.length)
+      const multiplier = multipliers[slot]
+      const winnings = Math.floor(betAmount * multiplier)
+
+      this.balance += winnings
+      this.plinkoDropping = false
+
+      if (multiplier >= 1) {
+        this.updateStats(betAmount, winnings, true)
+        this.showMessage(`Landed on ${multiplier}x! Won ${winnings.toLocaleString()} FATTY BUCKS!`, 'success')
+      } else {
+        this.updateStats(betAmount, 0, false)
+        this.showMessage(`Landed on ${multiplier}x! Lost ${(betAmount - winnings).toLocaleString()} FATTY BUCKS!`, 'error')
+      }
+
+      this.render()
+    }, 2000)
   }
 
   playCoinFlip(choice) {
