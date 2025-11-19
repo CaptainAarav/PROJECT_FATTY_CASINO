@@ -868,6 +868,9 @@ class FattyCasino {
         </div>
         <button class="nav-btn ${this.currentView === 'leaderboard' ? 'active' : ''}" data-view="leaderboard">🏆 Leaderboard</button>
         <button class="nav-btn ${this.currentView === 'stats' ? 'active' : ''}" data-view="stats">📊 Stats</button>
+        <button class="nav-btn ${this.currentView === 'achievements' ? 'active' : ''}" data-view="achievements">🏅 Achievements</button>
+        <button class="nav-btn ${this.currentView === 'quests' ? 'active' : ''}" data-view="quests">📋 Quests</button>
+        <button class="nav-btn ${this.currentView === 'shop' ? 'active' : ''}" data-view="shop">🛒 Shop</button>
         <button class="nav-btn ${this.currentView === 'chat' ? 'active' : ''}" data-view="chat">💬 Chat</button>
         <button class="nav-btn ${this.currentView === 'friends' ? 'active' : ''}" data-view="friends">👥 Friends ${this.friendRequests.length > 0 ? `<span style="background: var(--accent-red); color: white; border-radius: 50%; padding: 0.1rem 0.5rem; margin-left: 0.3rem; font-size: 0.8rem;">${this.friendRequests.length}</span>` : ''}</button>
       </nav>
@@ -984,6 +987,9 @@ class FattyCasino {
       case 'profile': return this.renderProfile()
       case 'chat': return this.renderChat()
       case 'friends': return this.renderFriends()
+      case 'achievements': return this.renderAchievements()
+      case 'quests': return this.renderQuests()
+      case 'shop': return this.renderShop()
       default: return this.renderHome()
     }
   }
@@ -1366,6 +1372,177 @@ class FattyCasino {
     `
   }
 
+  renderAchievements() {
+    const currentXP = this.xp
+    const currentLevel = this.level
+    const xpForNextLevel = getXPForNextLevel(currentLevel)
+    const xpProgress = currentXP - getXPForLevel(currentLevel)
+    const xpNeeded = xpForNextLevel - getXPForLevel(currentLevel)
+    const progressPercent = (xpProgress / xpNeeded) * 100
+
+    const tierInfo = VIP_TIERS.find(t => t.name === this.vipTier)
+
+    return `
+      <div class="game-container">
+        <h2 class="text-center mb-2">🏅 Achievements & Progress</h2>
+
+        <!-- Level & XP Progress -->
+        <div style="background: var(--bg-tertiary); border: 2px solid var(--accent-gold); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div>
+              <h3 style="color: var(--accent-gold); margin: 0;">Level ${currentLevel}</h3>
+              <p style="color: var(--text-secondary); margin: 0.3rem 0 0 0; font-size: 0.9rem;">${xpProgress.toLocaleString()} / ${xpNeeded.toLocaleString()} XP</p>
+            </div>
+            <div style="text-align: right;">
+              <div style="background: ${tierInfo.color}; color: #000; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 700; font-size: 1.1rem;">
+                ${this.vipTier}
+              </div>
+              <p style="color: var(--text-secondary); margin: 0.3rem 0 0 0; font-size: 0.85rem;">${currentXP.toLocaleString()} Total XP</p>
+            </div>
+          </div>
+          <div style="background: var(--bg-secondary); height: 30px; border-radius: 15px; overflow: hidden; position: relative;">
+            <div style="background: linear-gradient(90deg, var(--accent-gold), #ffed4e); height: 100%; width: ${progressPercent}%; transition: width 0.3s ease;"></div>
+            <span style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-primary); font-weight: 700; text-shadow: 0 0 4px rgba(0,0,0,0.8);">${Math.floor(progressPercent)}%</span>
+          </div>
+        </div>
+
+        <!-- Achievements Grid -->
+        <h3 style="color: var(--accent-gold); margin-bottom: 1rem;">Achievements (${this.achievements.length}/${ACHIEVEMENTS.length})</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+          ${ACHIEVEMENTS.map(achievement => {
+            const unlocked = this.achievements.includes(achievement.id)
+            return `
+              <div style="background: ${unlocked ? 'var(--bg-tertiary)' : 'var(--bg-secondary)'}; border: 2px solid ${unlocked ? 'var(--accent-gold)' : 'var(--border)'}; border-radius: 12px; padding: 1rem; opacity: ${unlocked ? '1' : '0.6'}; transition: all 0.3s ease;">
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.8rem;">
+                  <div style="font-size: 3rem; ${unlocked ? '' : 'filter: grayscale(100%);'}">${achievement.icon}</div>
+                  <div style="flex: 1;">
+                    <h4 style="color: ${unlocked ? 'var(--accent-gold)' : 'var(--text-secondary)'}; margin: 0 0 0.3rem 0;">${achievement.name}</h4>
+                    <p style="color: var(--text-secondary); margin: 0; font-size: 0.85rem;">${achievement.description}</p>
+                  </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="color: var(--accent-gold); font-weight: 600;">+${achievement.reward.toLocaleString()} FATTY BUCKS</span>
+                  ${unlocked ? '<span style="color: var(--accent-green); font-weight: 700;">✓ UNLOCKED</span>' : '<span style="color: var(--text-secondary); font-size: 0.85rem;">🔒 Locked</span>'}
+                </div>
+              </div>
+            `
+          }).join('')}
+        </div>
+      </div>
+    `
+  }
+
+  renderQuests() {
+    this.checkDailyQuests()
+
+    return `
+      <div class="game-container">
+        <h2 class="text-center mb-2">📋 Daily Quests</h2>
+        <p class="text-center mb-2" style="color: var(--text-secondary);">
+          Complete quests to earn FATTY BUCKS! Resets daily at midnight.
+        </p>
+
+        <div style="display: grid; gap: 1rem;">
+          ${this.dailyQuests.map((quest, index) => {
+            const progressPercent = (quest.progress / quest.target) * 100
+            return `
+              <div style="background: ${quest.completed ? 'var(--bg-tertiary)' : 'var(--bg-secondary)'}; border: 2px solid ${quest.completed ? 'var(--accent-green)' : 'var(--border)'}; border-radius: 12px; padding: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                  <div>
+                    <h3 style="color: ${quest.completed ? 'var(--accent-green)' : 'var(--accent-gold)'}; margin: 0 0 0.5rem 0;">${quest.name}</h3>
+                    <p style="color: var(--text-secondary); margin: 0; font-size: 0.9rem;">${quest.description}</p>
+                  </div>
+                  <div style="text-align: right;">
+                    <div style="color: var(--accent-gold); font-weight: 700; font-size: 1.2rem;">+${quest.reward.toLocaleString()}</div>
+                    ${quest.completed ? '<div style="color: var(--accent-green); font-size: 0.85rem; margin-top: 0.3rem;">✓ COMPLETED</div>' : ''}
+                  </div>
+                </div>
+
+                <div style="background: var(--bg-primary); height: 25px; border-radius: 12px; overflow: hidden; position: relative;">
+                  <div style="background: ${quest.completed ? 'var(--accent-green)' : 'linear-gradient(90deg, var(--accent-gold), #ffed4e)'}; height: 100%; width: ${progressPercent}%; transition: width 0.3s ease;"></div>
+                  <span style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-primary); font-weight: 700; font-size: 0.85rem; text-shadow: 0 0 4px rgba(0,0,0,0.8);">
+                    ${quest.progress} / ${quest.target}
+                  </span>
+                </div>
+              </div>
+            `
+          }).join('')}
+        </div>
+
+        <div style="background: var(--bg-tertiary); border: 2px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem; text-align: center;">
+          <p style="color: var(--text-secondary); margin: 0;">
+            Quests reset in <strong style="color: var(--accent-gold);">${this.getTimeUntilMidnight()}</strong>
+          </p>
+        </div>
+      </div>
+    `
+  }
+
+  renderShop() {
+    const activeBoosts = this.getActiveBoosts()
+
+    return `
+      <div class="game-container">
+        <h2 class="text-center mb-2">🛒 Shop</h2>
+        <p class="text-center mb-2" style="color: var(--text-secondary);">
+          Purchase power-ups and cosmetics with FATTY BUCKS!
+        </p>
+
+        ${activeBoosts.length > 0 ? `
+          <div style="background: var(--bg-tertiary); border: 2px solid var(--accent-gold); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem;">
+            <h3 style="color: var(--accent-gold); margin: 0 0 1rem 0;">🔥 Active Items</h3>
+            ${activeBoosts.map(item => `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: var(--bg-secondary); border-radius: 8px; margin-bottom: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.8rem;">
+                  <span style="font-size: 1.5rem;">${item.icon}</span>
+                  <span style="color: var(--text-primary); font-weight: 600;">${item.name}</span>
+                </div>
+                ${item.expiresAt ? `<span style="color: var(--text-secondary); font-size: 0.85rem;">Expires: ${new Date(item.expiresAt).toLocaleTimeString()}</span>` : '<span style="color: var(--accent-green); font-size: 0.85rem;">✓ Owned</span>'}
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+          ${SHOP_ITEMS.map(item => {
+            const owned = this.inventory.some(i => i.id === item.id && (!i.expiresAt || new Date(i.expiresAt).getTime() > Date.now()))
+            return `
+              <div style="background: var(--bg-tertiary); border: 2px solid var(--border); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column;">
+                <div style="text-align: center; margin-bottom: 1rem;">
+                  <div style="font-size: 4rem; margin-bottom: 0.5rem;">${item.icon}</div>
+                  <h3 style="color: var(--accent-gold); margin: 0 0 0.5rem 0;">${item.name}</h3>
+                  <p style="color: var(--text-secondary); margin: 0; font-size: 0.9rem; min-height: 2.5rem;">${item.description}</p>
+                </div>
+
+                <div style="margin-top: auto;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <span style="color: var(--accent-gold); font-weight: 700; font-size: 1.3rem;">${item.price.toLocaleString()}</span>
+                    <span style="color: var(--text-secondary); font-size: 0.85rem;">${item.type === 'boost' ? '⏱️ Timed' : item.type === 'cosmetic' ? '♾️ Permanent' : '🎫 Pass'}</span>
+                  </div>
+                  <button class="btn ${owned && item.type === 'cosmetic' ? 'btn-secondary' : 'btn-primary'}" data-buy-item="${item.id}" style="width: 100%;" ${owned && item.type === 'cosmetic' ? 'disabled' : ''}>
+                    ${owned && item.type === 'cosmetic' ? '✓ Owned' : 'Purchase'}
+                  </button>
+                </div>
+              </div>
+            `
+          }).join('')}
+        </div>
+      </div>
+    `
+  }
+
+  getTimeUntilMidnight() {
+    const now = new Date()
+    const midnight = new Date(now)
+    midnight.setHours(24, 0, 0, 0)
+    const diff = midnight - now
+
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+
+    return `${hours}h ${minutes}m`
+  }
+
   attachEventListeners() {
     // Daily bonus button
     document.getElementById('daily-bonus-btn')?.addEventListener('click', () => {
@@ -1730,6 +1907,17 @@ class FattyCasino {
             console.error('Error sending gift:', error)
             this.showMessage(error.message || 'Failed to send gift', 'error')
           }
+        })
+      })
+    }
+
+    // Shop
+    if (this.currentView === 'shop') {
+      document.querySelectorAll('[data-buy-item]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const itemId = e.target.dataset.buyItem
+          this.buyShopItem(itemId)
+          this.render()
         })
       })
     }
