@@ -9,7 +9,16 @@ import {
   getUserData,
   createUserProfile,
   updateUserData,
-  getLeaderboard
+  getLeaderboard,
+  sendChatMessage,
+  subscribeToChatMessages,
+  sendFriendRequest,
+  acceptFriendRequest,
+  declineFriendRequest,
+  getFriendRequests,
+  getFriends,
+  sendGift,
+  searchUsers
 } from './firebase.js'
 
 // Game State Management
@@ -42,6 +51,11 @@ class FattyCasino {
     this.cropImageData = null
     this.cropZoom = 1
     this.cropPosition = { x: 0, y: 0 }
+    // Social features
+    this.chatMessages = []
+    this.chatUnsubscribe = null
+    this.friends = []
+    this.friendRequests = []
     this.init()
   }
 
@@ -55,13 +69,56 @@ class FattyCasino {
       if (user) {
         await this.loadUserData(user.uid)
         this.startLeaderboardPolling()
+        this.startChatSubscription()
+        await this.loadFriends()
+        await this.loadFriendRequests()
       } else {
         this.leaderboard = []
         this.stopLeaderboardPolling()
+        this.stopChatSubscription()
+        this.friends = []
+        this.friendRequests = []
       }
       this.render()
       this.updateWallet()
     })
+  }
+
+  startChatSubscription() {
+    if (this.chatUnsubscribe) {
+      this.chatUnsubscribe()
+    }
+    this.chatUnsubscribe = subscribeToChatMessages((messages) => {
+      this.chatMessages = messages
+      if (this.currentView === 'chat') {
+        this.render()
+      }
+    })
+  }
+
+  stopChatSubscription() {
+    if (this.chatUnsubscribe) {
+      this.chatUnsubscribe()
+      this.chatUnsubscribe = null
+    }
+  }
+
+  async loadFriends() {
+    if (!this.user) return
+    try {
+      this.friends = await getFriends(this.user.uid)
+    } catch (error) {
+      console.error('Error loading friends:', error)
+    }
+  }
+
+  async loadFriendRequests() {
+    if (!this.user) return
+    try {
+      this.friendRequests = await getFriendRequests(this.user.uid)
+    } catch (error) {
+      console.error('Error loading friend requests:', error)
+    }
   }
 
   showLoading() {
@@ -108,7 +165,8 @@ class FattyCasino {
       profileImage: null,
       theme: 'gold',
       balance: 10000,
-      stats: this.stats
+      stats: this.stats,
+      friends: []
     }
 
     await createUserProfile(userId, newUserData)
@@ -623,6 +681,8 @@ class FattyCasino {
         </div>
         <button class="nav-btn ${this.currentView === 'leaderboard' ? 'active' : ''}" data-view="leaderboard">🏆 Leaderboard</button>
         <button class="nav-btn ${this.currentView === 'stats' ? 'active' : ''}" data-view="stats">📊 Stats</button>
+        <button class="nav-btn ${this.currentView === 'chat' ? 'active' : ''}" data-view="chat">💬 Chat</button>
+        <button class="nav-btn ${this.currentView === 'friends' ? 'active' : ''}" data-view="friends">👥 Friends ${this.friendRequests.length > 0 ? `<span style="background: var(--accent-red); color: white; border-radius: 50%; padding: 0.1rem 0.5rem; margin-left: 0.3rem; font-size: 0.8rem;">${this.friendRequests.length}</span>` : ''}</button>
       </nav>
 
       <div class="main-content">
@@ -735,6 +795,8 @@ class FattyCasino {
       case 'leaderboard': return this.renderLeaderboard()
       case 'stats': return this.renderStats()
       case 'profile': return this.renderProfile()
+      case 'chat': return this.renderChat()
+      case 'friends': return this.renderFriends()
       default: return this.renderHome()
     }
   }
@@ -1020,6 +1082,103 @@ class FattyCasino {
     `
   }
 
+  renderChat() {
+    return `
+      <div class="game-container">
+        <h2 class="text-center mb-2">💬 Live Chat</h2>
+        <p class="text-center mb-2" style="color: var(--text-secondary);">
+          Chat with other players in real-time!
+        </p>
+
+        <div style="background: var(--bg-tertiary); border: 2px solid var(--border); border-radius: 12px; padding: 1rem; height: 400px; overflow-y: auto; margin-bottom: 1rem;" id="chat-messages">
+          ${this.chatMessages.length === 0 ? `
+            <p style="text-align: center; color: var(--text-secondary); margin-top: 2rem;">No messages yet. Be the first to say hello!</p>
+          ` : ''}
+          ${this.chatMessages.map(msg => `
+            <div style="display: flex; gap: 0.8rem; margin-bottom: 1rem; padding: 0.8rem; background: ${msg.userId === this.user?.uid ? 'var(--bg-secondary)' : 'transparent'}; border-radius: 8px;">
+              ${msg.profileImage ?
+                `<img src="${msg.profileImage}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-gold); flex-shrink: 0;">` :
+                `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-gold), #ffed4e); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; border: 2px solid var(--accent-gold); flex-shrink: 0;">${msg.avatar || '🎰'}</div>`
+              }
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem;">
+                  <strong style="color: var(--accent-gold);">${msg.username}</strong>
+                  <span style="color: var(--text-secondary); font-size: 0.75rem;">${new Date(msg.createdAt).toLocaleTimeString()}</span>
+                </div>
+                <p style="color: var(--text-primary); margin: 0; word-wrap: break-word;">${msg.message}</p>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          <input type="text" id="chat-input" placeholder="Type your message..." style="flex: 1; background: var(--bg-tertiary); border: 2px solid var(--border); border-radius: 8px; padding: 1rem; color: var(--text-primary); font-size: 1rem;" maxlength="200">
+          <button class="btn btn-primary" id="send-chat-btn" style="padding: 1rem 2rem;">Send</button>
+        </div>
+      </div>
+    `
+  }
+
+  renderFriends() {
+    return `
+      <div class="game-container">
+        <h2 class="text-center mb-2">👥 Friends</h2>
+
+        ${this.friendRequests.length > 0 ? `
+          <div style="background: var(--bg-tertiary); border: 2px solid var(--accent-gold); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem;">
+            <h3 style="color: var(--accent-gold); margin-bottom: 1rem;">Friend Requests (${this.friendRequests.length})</h3>
+            ${this.friendRequests.map(req => `
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.8rem; background: var(--bg-secondary); border-radius: 8px; margin-bottom: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.8rem;">
+                  ${req.fromUser.profileImage ?
+                    `<img src="${req.fromUser.profileImage}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-gold);">` :
+                    `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-gold), #ffed4e); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; border: 2px solid var(--accent-gold);">${req.fromUser.avatar || '🎰'}</div>`
+                  }
+                  <span style="color: var(--text-primary); font-weight: 600;">${req.fromUser.username}</span>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                  <button class="btn btn-primary" data-accept-request="${req.id}" data-friend-id="${req.from}" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Accept</button>
+                  <button class="btn btn-secondary" data-decline-request="${req.id}" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Decline</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+
+        <div style="background: var(--bg-tertiary); border: 2px solid var(--border); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem;">
+          <h3 style="color: var(--accent-gold); margin-bottom: 1rem;">Add Friends</h3>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="friend-search" placeholder="Search by username..." style="flex: 1; background: var(--bg-secondary); border: 2px solid var(--border); border-radius: 8px; padding: 0.8rem; color: var(--text-primary);">
+            <button class="btn btn-primary" id="search-friends-btn" style="padding: 0.8rem 1.5rem;">Search</button>
+          </div>
+          <div id="search-results" style="margin-top: 1rem;"></div>
+        </div>
+
+        <div style="background: var(--bg-tertiary); border: 2px solid var(--border); border-radius: 12px; padding: 1rem;">
+          <h3 style="color: var(--accent-gold); margin-bottom: 1rem;">Your Friends (${this.friends.length})</h3>
+          ${this.friends.length === 0 ? `
+            <p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No friends yet. Add some friends to get started!</p>
+          ` : ''}
+          ${this.friends.map(friend => `
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.8rem; background: var(--bg-secondary); border-radius: 8px; margin-bottom: 0.5rem;">
+              <div style="display: flex; align-items: center; gap: 0.8rem;">
+                ${friend.profileImage ?
+                  `<img src="${friend.profileImage}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-gold);">` :
+                  `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-gold), #ffed4e); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; border: 2px solid var(--accent-gold);">${friend.avatar || '🎰'}</div>`
+                }
+                <div>
+                  <div style="color: var(--text-primary); font-weight: 600;">${friend.username}</div>
+                  <div style="color: var(--text-secondary); font-size: 0.85rem;">${(friend.balance || 0).toLocaleString()} FATTY BUCKS</div>
+                </div>
+              </div>
+              <button class="btn btn-primary" data-gift-friend="${friend.id}" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Gift FATTY BUCKS</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `
+  }
+
   attachEventListeners() {
     // Daily bonus button
     document.getElementById('daily-bonus-btn')?.addEventListener('click', () => {
@@ -1216,6 +1375,175 @@ class FattyCasino {
           this.showMessage('Stats reset!')
           this.render()
         }
+      })
+    }
+
+    // Chat
+    if (this.currentView === 'chat') {
+      const sendMessage = async () => {
+        const input = document.getElementById('chat-input')
+        const message = input?.value.trim()
+        if (!message) return
+
+        try {
+          await sendChatMessage(
+            this.user.uid,
+            this.profile.username,
+            this.profile.avatar,
+            this.profile.profileImage,
+            message
+          )
+          input.value = ''
+          // Scroll to bottom
+          setTimeout(() => {
+            const chatContainer = document.getElementById('chat-messages')
+            if (chatContainer) {
+              chatContainer.scrollTop = chatContainer.scrollHeight
+            }
+          }, 100)
+        } catch (error) {
+          console.error('Error sending message:', error)
+          this.showMessage('Failed to send message', 'error')
+        }
+      }
+
+      document.getElementById('send-chat-btn')?.addEventListener('click', sendMessage)
+      document.getElementById('chat-input')?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          sendMessage()
+        }
+      })
+
+      // Auto-scroll to bottom on load
+      setTimeout(() => {
+        const chatContainer = document.getElementById('chat-messages')
+        if (chatContainer) {
+          chatContainer.scrollTop = chatContainer.scrollHeight
+        }
+      }, 100)
+    }
+
+    // Friends
+    if (this.currentView === 'friends') {
+      // Search friends
+      document.getElementById('search-friends-btn')?.addEventListener('click', async () => {
+        const searchTerm = document.getElementById('friend-search')?.value.trim()
+        if (!searchTerm) {
+          this.showMessage('Please enter a username to search', 'error')
+          return
+        }
+
+        try {
+          const results = await searchUsers(searchTerm)
+          const searchResults = document.getElementById('search-results')
+          if (!searchResults) return
+
+          if (results.length === 0) {
+            searchResults.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 1rem;">No users found</p>'
+            return
+          }
+
+          searchResults.innerHTML = results
+            .filter(user => user.id !== this.user.uid) // Don't show yourself
+            .map(user => `
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.8rem; background: var(--bg-secondary); border-radius: 8px; margin-bottom: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.8rem;">
+                  ${user.profileImage ?
+                    `<img src="${user.profileImage}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-gold);">` :
+                    `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-gold), #ffed4e); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; border: 2px solid var(--accent-gold);">${user.avatar || '🎰'}</div>`
+                  }
+                  <span style="color: var(--text-primary); font-weight: 600;">${user.username}</span>
+                </div>
+                <button class="btn btn-primary" data-add-friend="${user.id}" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Add Friend</button>
+              </div>
+            `).join('')
+
+          // Add friend buttons
+          document.querySelectorAll('[data-add-friend]').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              const friendId = e.target.dataset.addFriend
+              try {
+                await sendFriendRequest(this.user.uid, friendId)
+                this.showMessage('Friend request sent!', 'success')
+                e.target.disabled = true
+                e.target.textContent = 'Request Sent'
+              } catch (error) {
+                console.error('Error sending friend request:', error)
+                this.showMessage('Failed to send friend request', 'error')
+              }
+            })
+          })
+        } catch (error) {
+          console.error('Error searching users:', error)
+          this.showMessage('Failed to search users', 'error')
+        }
+      })
+
+      // Accept friend request
+      document.querySelectorAll('[data-accept-request]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const requestId = e.target.dataset.acceptRequest
+          const friendId = e.target.dataset.friendId
+          try {
+            await acceptFriendRequest(requestId, this.user.uid, friendId)
+            await this.loadFriends()
+            await this.loadFriendRequests()
+            this.showMessage('Friend request accepted!', 'success')
+            this.render()
+          } catch (error) {
+            console.error('Error accepting friend request:', error)
+            this.showMessage('Failed to accept friend request', 'error')
+          }
+        })
+      })
+
+      // Decline friend request
+      document.querySelectorAll('[data-decline-request]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const requestId = e.target.dataset.declineRequest
+          try {
+            await declineFriendRequest(requestId)
+            await this.loadFriendRequests()
+            this.showMessage('Friend request declined', 'success')
+            this.render()
+          } catch (error) {
+            console.error('Error declining friend request:', error)
+            this.showMessage('Failed to decline friend request', 'error')
+          }
+        })
+      })
+
+      // Gift FATTY BUCKS
+      document.querySelectorAll('[data-gift-friend]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const friendId = e.target.dataset.giftFriend
+          const friend = this.friends.find(f => f.id === friendId)
+          if (!friend) return
+
+          const amount = prompt(`How many FATTY BUCKS do you want to gift to ${friend.username}?\n\nYour balance: ${this.balance.toLocaleString()} FATTY BUCKS`)
+          if (!amount) return
+
+          const giftAmount = parseInt(amount)
+          if (isNaN(giftAmount) || giftAmount <= 0) {
+            this.showMessage('Invalid amount', 'error')
+            return
+          }
+
+          if (giftAmount > this.balance) {
+            this.showMessage('Insufficient balance!', 'error')
+            return
+          }
+
+          try {
+            await sendGift(this.user.uid, friendId, giftAmount)
+            this.balance -= giftAmount
+            this.updateWallet()
+            this.showMessage(`Sent ${giftAmount.toLocaleString()} FATTY BUCKS to ${friend.username}!`, 'success')
+          } catch (error) {
+            console.error('Error sending gift:', error)
+            this.showMessage(error.message || 'Failed to send gift', 'error')
+          }
+        })
       })
     }
   }

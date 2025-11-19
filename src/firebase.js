@@ -8,7 +8,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword
 } from 'firebase/auth'
-import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, orderBy, limit, getDocs, onSnapshot } from 'firebase/firestore'
+import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, orderBy, limit, getDocs, onSnapshot, addDoc, where, serverTimestamp, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore'
 
 // Firebase configuration
 const firebaseConfig = {
@@ -176,6 +176,212 @@ export const subscribeToLeaderboard = (callback, limitCount = 10) => {
     console.error('Error subscribing to leaderboard:', error)
     callback([])
     return () => {}
+  }
+}
+
+// Chat functions
+export const sendChatMessage = async (userId, username, avatar, profileImage, message) => {
+  if (!isConfigured) return
+  try {
+    await addDoc(collection(db, 'chat'), {
+      userId,
+      username,
+      avatar,
+      profileImage,
+      message,
+      timestamp: serverTimestamp(),
+      createdAt: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Error sending message:', error)
+    throw error
+  }
+}
+
+export const subscribeToChatMessages = (callback, limitCount = 50) => {
+  if (!isConfigured) {
+    callback([])
+    return () => {}
+  }
+  try {
+    const q = query(
+      collection(db, 'chat'),
+      orderBy('timestamp', 'desc'),
+      limit(limitCount)
+    )
+    return onSnapshot(q, (snapshot) => {
+      const messages = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })).reverse()
+      callback(messages)
+    })
+  } catch (error) {
+    console.error('Error subscribing to chat:', error)
+    callback([])
+    return () => {}
+  }
+}
+
+// Friend system functions
+export const sendFriendRequest = async (fromUserId, toUserId) => {
+  if (!isConfigured) return
+  try {
+    await addDoc(collection(db, 'friendRequests'), {
+      from: fromUserId,
+      to: toUserId,
+      status: 'pending',
+      timestamp: serverTimestamp(),
+      createdAt: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Error sending friend request:', error)
+    throw error
+  }
+}
+
+export const acceptFriendRequest = async (requestId, userId, friendId) => {
+  if (!isConfigured) return
+  try {
+    // Add to both users' friend lists
+    await updateDoc(doc(db, 'users', userId), {
+      friends: arrayUnion(friendId)
+    })
+    await updateDoc(doc(db, 'users', friendId), {
+      friends: arrayUnion(userId)
+    })
+    // Delete the friend request
+    await deleteDoc(doc(db, 'friendRequests', requestId))
+  } catch (error) {
+    console.error('Error accepting friend request:', error)
+    throw error
+  }
+}
+
+export const declineFriendRequest = async (requestId) => {
+  if (!isConfigured) return
+  try {
+    await deleteDoc(doc(db, 'friendRequests', requestId))
+  } catch (error) {
+    console.error('Error declining friend request:', error)
+    throw error
+  }
+}
+
+export const getFriendRequests = async (userId) => {
+  if (!isConfigured) return []
+  try {
+    const q = query(
+      collection(db, 'friendRequests'),
+      where('to', '==', userId),
+      where('status', '==', 'pending')
+    )
+    const querySnapshot = await getDocs(q)
+    const requests = []
+    for (const docSnap of querySnapshot.docs) {
+      const requestData = docSnap.data()
+      const fromUserDoc = await getDoc(doc(db, 'users', requestData.from))
+      if (fromUserDoc.exists()) {
+        requests.push({
+          id: docSnap.id,
+          ...requestData,
+          fromUser: fromUserDoc.data()
+        })
+      }
+    }
+    return requests
+  } catch (error) {
+    console.error('Error getting friend requests:', error)
+    return []
+  }
+}
+
+export const getFriends = async (userId) => {
+  if (!isConfigured) return []
+  try {
+    const userDoc = await getDoc(doc(db, 'users', userId))
+    if (!userDoc.exists()) return []
+
+    const friendIds = userDoc.data().friends || []
+    const friends = []
+
+    for (const friendId of friendIds) {
+      const friendDoc = await getDoc(doc(db, 'users', friendId))
+      if (friendDoc.exists()) {
+        friends.push({
+          id: friendId,
+          ...friendDoc.data()
+        })
+      }
+    }
+    return friends
+  } catch (error) {
+    console.error('Error getting friends:', error)
+    return []
+  }
+}
+
+// Gift system
+export const sendGift = async (fromUserId, toUserId, amount) => {
+  if (!isConfigured) return
+  try {
+    // Get both users' data
+    const fromUserDoc = await getDoc(doc(db, 'users', fromUserId))
+    const toUserDoc = await getDoc(doc(db, 'users', toUserId))
+
+    if (!fromUserDoc.exists() || !toUserDoc.exists()) {
+      throw new Error('User not found')
+    }
+
+    const fromUserBalance = fromUserDoc.data().balance || 0
+    if (fromUserBalance < amount) {
+      throw new Error('Insufficient balance')
+    }
+
+    // Update balances
+    await updateDoc(doc(db, 'users', fromUserId), {
+      balance: fromUserBalance - amount
+    })
+
+    const toUserBalance = toUserDoc.data().balance || 0
+    await updateDoc(doc(db, 'users', toUserId), {
+      balance: toUserBalance + amount
+    })
+
+    // Log the transaction
+    await addDoc(collection(db, 'transactions'), {
+      type: 'gift',
+      from: fromUserId,
+      to: toUserId,
+      amount,
+      timestamp: serverTimestamp(),
+      createdAt: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Error sending gift:', error)
+    throw error
+  }
+}
+
+// Search users
+export const searchUsers = async (searchTerm) => {
+  if (!isConfigured) return []
+  try {
+    const q = query(collection(db, 'users'))
+    const querySnapshot = await getDocs(q)
+    const users = querySnapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+      .filter(user =>
+        user.username && user.username.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .slice(0, 10) // Limit to 10 results
+    return users
+  } catch (error) {
+    console.error('Error searching users:', error)
+    return []
   }
 }
 
