@@ -21,6 +21,66 @@ import {
   searchUsers
 } from './firebase.js'
 
+// Achievement definitions
+const ACHIEVEMENTS = [
+  { id: 'first_win', name: 'First Winner', description: 'Win your first game', icon: '🏆', reward: 500, condition: (stats) => stats.totalWon > 0 },
+  { id: 'high_roller', name: 'High Roller', description: 'Wager 50,000 FATTY BUCKS', icon: '💎', reward: 2000, condition: (stats) => stats.totalWagered >= 50000 },
+  { id: 'millionaire', name: 'Millionaire', description: 'Reach 1,000,000 FATTY BUCKS', icon: '💰', reward: 10000, condition: (stats, balance) => balance >= 1000000 },
+  { id: 'lucky_streak', name: 'Lucky Streak', description: 'Win 5 games in a row', icon: '🍀', reward: 1000, condition: (stats) => stats.winStreak >= 5 },
+  { id: 'big_winner', name: 'Big Winner', description: 'Win 100,000 in a single game', icon: '🎰', reward: 5000, condition: (stats) => stats.biggestWin >= 100000 },
+  { id: 'grinder', name: 'The Grinder', description: 'Play 100 games', icon: '⚡', reward: 3000, condition: (stats) => stats.gamesPlayed >= 100 },
+  { id: 'social_butterfly', name: 'Social Butterfly', description: 'Add 5 friends', icon: '👥', reward: 1500, condition: (stats, balance, friends) => friends.length >= 5 },
+  { id: 'generous', name: 'Generous Soul', description: 'Gift 10,000 FATTY BUCKS to friends', icon: '🎁', reward: 2000, condition: (stats) => stats.totalGifted >= 10000 }
+]
+
+// Daily quest definitions
+const DAILY_QUESTS = [
+  { id: 'daily_games', name: 'Play 10 games', description: 'Play any 10 games', reward: 1000, target: 10, type: 'games' },
+  { id: 'daily_wager', name: 'Wager 5,000', description: 'Wager 5,000 FATTY BUCKS', reward: 800, target: 5000, type: 'wager' },
+  { id: 'daily_wins', name: 'Win 5 games', description: 'Win any 5 games', reward: 1500, target: 5, type: 'wins' }
+]
+
+// VIP tier thresholds
+const VIP_TIERS = [
+  { name: 'Bronze', minXP: 0, color: '#CD7F32', perks: ['Basic rewards', 'Daily bonus'] },
+  { name: 'Silver', minXP: 5000, color: '#C0C0C0', perks: ['5% bonus XP', '10% better odds', 'Silver badge'] },
+  { name: 'Gold', minXP: 15000, color: '#FFD700', perks: ['10% bonus XP', '15% better odds', 'Gold badge', 'Exclusive games'] },
+  { name: 'Platinum', minXP: 35000, color: '#E5E4E2', perks: ['15% bonus XP', '20% better odds', 'Platinum badge', 'Priority support'] },
+  { name: 'Diamond', minXP: 75000, color: '#B9F2FF', perks: ['25% bonus XP', '25% better odds', 'Diamond badge', 'VIP lounge access'] }
+]
+
+// Shop items
+const SHOP_ITEMS = [
+  { id: 'lucky_charm', name: 'Lucky Charm', description: '+5% win chance for 24h', price: 5000, icon: '🍀', type: 'boost', duration: 86400000 },
+  { id: 'double_xp', name: 'Double XP', description: '2x XP for 1 hour', price: 3000, icon: '⚡', type: 'boost', duration: 3600000 },
+  { id: 'coin_doubler', name: 'Coin Doubler', description: '2x winnings for 30min', price: 10000, icon: '💰', type: 'boost', duration: 1800000 },
+  { id: 'vip_pass', name: 'VIP Day Pass', description: 'Access VIP features for 24h', price: 8000, icon: '👑', type: 'pass', duration: 86400000 },
+  { id: 'gold_frame', name: 'Gold Profile Frame', description: 'Permanent gold profile frame', price: 15000, icon: '🖼️', type: 'cosmetic', duration: null },
+  { id: 'rainbow_frame', name: 'Rainbow Profile Frame', description: 'Permanent rainbow profile frame', price: 25000, icon: '🌈', type: 'cosmetic', duration: null }
+]
+
+// Helper functions
+function calculateLevel(xp) {
+  return Math.floor(Math.sqrt(xp / 100)) + 1
+}
+
+function getXPForLevel(level) {
+  return Math.pow(level - 1, 2) * 100
+}
+
+function getXPForNextLevel(level) {
+  return Math.pow(level, 2) * 100
+}
+
+function calculateVIPTier(xp) {
+  for (let i = VIP_TIERS.length - 1; i >= 0; i--) {
+    if (xp >= VIP_TIERS[i].minXP) {
+      return VIP_TIERS[i].name
+    }
+  }
+  return 'Bronze'
+}
+
 // Game State Management
 class FattyCasino {
   constructor() {
@@ -56,6 +116,13 @@ class FattyCasino {
     this.chatUnsubscribe = null
     this.friends = []
     this.friendRequests = []
+    // Progression system
+    this.xp = 0
+    this.level = 1
+    this.achievements = []
+    this.dailyQuests = []
+    this.vipTier = 'Bronze'
+    this.inventory = []
     this.init()
   }
 
@@ -147,6 +214,13 @@ class FattyCasino {
         }
         this.stats = userData.stats || this.stats
         this.lastDailyBonus = userData.lastDailyBonus || null
+        // Load progression data
+        this.xp = userData.xp || 0
+        this.level = calculateLevel(this.xp)
+        this.achievements = userData.achievements || []
+        this.dailyQuests = userData.dailyQuests || this.generateDailyQuests()
+        this.vipTier = calculateVIPTier(this.xp)
+        this.inventory = userData.inventory || []
       } else {
         // Create new user profile
         await this.createNewUserProfile(userId)
@@ -166,7 +240,11 @@ class FattyCasino {
       theme: 'gold',
       balance: 10000,
       stats: this.stats,
-      friends: []
+      friends: [],
+      xp: 0,
+      achievements: [],
+      dailyQuests: this.generateDailyQuests(),
+      inventory: []
     }
 
     await createUserProfile(userId, newUserData)
@@ -248,12 +326,110 @@ class FattyCasino {
         theme: this.profile.theme,
         balance: this.balance,
         stats: this.stats,
-        lastDailyBonus: this.lastDailyBonus
+        lastDailyBonus: this.lastDailyBonus,
+        xp: this.xp,
+        achievements: this.achievements,
+        dailyQuests: this.dailyQuests,
+        inventory: this.inventory
       })
     } catch (error) {
       console.error('Error saving user data:', error)
       this.showMessage('Error saving data', 'error')
     }
+  }
+
+  // Progression system methods
+  addXP(amount) {
+    const oldLevel = this.level
+    this.xp += amount
+    this.level = calculateLevel(this.xp)
+    this.vipTier = calculateVIPTier(this.xp)
+
+    if (this.level > oldLevel) {
+      this.showMessage(`🎉 Level Up! You reached Level ${this.level}!`, 'success')
+      this.balance += this.level * 100 // Level up reward
+    }
+  }
+
+  generateDailyQuests() {
+    const now = new Date().toDateString()
+    return DAILY_QUESTS.map(quest => ({
+      ...quest,
+      progress: 0,
+      completed: false,
+      date: now
+    }))
+  }
+
+  checkDailyQuests() {
+    if (!this.dailyQuests || this.dailyQuests.length === 0) {
+      this.dailyQuests = this.generateDailyQuests()
+      return
+    }
+
+    // Reset quests if it's a new day
+    const today = new Date().toDateString()
+    if (this.dailyQuests[0].date !== today) {
+      this.dailyQuests = this.generateDailyQuests()
+    }
+  }
+
+  updateQuestProgress(type, amount) {
+    this.checkDailyQuests()
+
+    this.dailyQuests.forEach(quest => {
+      if (quest.type === type && !quest.completed) {
+        quest.progress = Math.min(quest.progress + amount, quest.target)
+        if (quest.progress >= quest.target) {
+          quest.completed = true
+          this.balance += quest.reward
+          this.showMessage(`✅ Quest completed: ${quest.name}! +${quest.reward} FATTY BUCKS`, 'success')
+        }
+      }
+    })
+  }
+
+  checkAchievements() {
+    ACHIEVEMENTS.forEach(achievement => {
+      if (!this.achievements.includes(achievement.id)) {
+        if (achievement.condition(this.stats, this.balance, this.friends)) {
+          this.achievements.push(achievement.id)
+          this.balance += achievement.reward
+          this.addXP(achievement.reward / 2)
+          this.showMessage(`🏆 Achievement Unlocked: ${achievement.name}! +${achievement.reward} FATTY BUCKS`, 'success')
+        }
+      }
+    })
+  }
+
+  buyShopItem(itemId) {
+    const item = SHOP_ITEMS.find(i => i.id === itemId)
+    if (!item) return
+
+    if (this.balance < item.price) {
+      this.showMessage('Insufficient FATTY BUCKS!', 'error')
+      return
+    }
+
+    this.balance -= item.price
+
+    const inventoryItem = {
+      ...item,
+      purchasedAt: new Date().toISOString(),
+      expiresAt: item.duration ? new Date(Date.now() + item.duration).toISOString() : null
+    }
+
+    this.inventory.push(inventoryItem)
+    this.saveUserData()
+    this.showMessage(`Purchased ${item.name}!`, 'success')
+  }
+
+  getActiveBoosts() {
+    const now = Date.now()
+    return this.inventory.filter(item => {
+      if (!item.expiresAt) return item.type === 'cosmetic'
+      return new Date(item.expiresAt).getTime() > now
+    })
   }
 
   canClaimDailyBonus() {
@@ -377,10 +553,21 @@ class FattyCasino {
       if (won > this.stats.biggestWin) {
         this.stats.biggestWin = won
       }
+      // Award XP for winning
+      this.addXP(Math.floor(won / 10))
+      // Update quest progress
+      this.updateQuestProgress('wins', 1)
     } else {
       this.stats.totalLost += wagered
       this.stats.currentStreak = 0
     }
+
+    // Update quest progress for games and wager
+    this.updateQuestProgress('games', 1)
+    this.updateQuestProgress('wager', wagered)
+
+    // Check for achievements
+    this.checkAchievements()
 
     this.saveUserData()
   }
