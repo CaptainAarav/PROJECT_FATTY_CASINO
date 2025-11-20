@@ -3537,7 +3537,7 @@ This typically indicates that your device does not have a healthy Internet conne
         </p>
 
         <div style="background: var(--bg-tertiary); border: 2px solid var(--border); border-radius: 12px; padding: 3rem 2rem; text-align: center; margin-bottom: 2rem;">
-          <div style="font-size: 5rem; font-weight: 900; background: linear-gradient(135deg, var(--accent-gold), #ffed4e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1rem;">
+          <div class="crash-multiplier" style="font-size: 5rem; font-weight: 900; background: linear-gradient(135deg, var(--accent-gold), #ffed4e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1rem;">
             ${this.crashMultiplier.toFixed(2)}x
           </div>
           <div style="font-size: 3rem; margin-bottom: 1rem;">
@@ -3550,7 +3550,7 @@ This typically indicates that your device does not have a healthy Internet conne
 
         ${this.crashActive?`
           <div style="text-align: center;">
-            <button class="btn btn-green" id="crash-cashout" style="font-size: 1.2rem; padding: 1rem 2rem;">Cash Out (${(this.crashMultiplier*parseInt(document.getElementById("crash-bet")?.value||100)).toFixed(0)} FATTY BUCKS)</button>
+            <button class="btn btn-green" id="crash-cashout" style="font-size: 1.2rem; padding: 1rem 2rem;">Cash Out (${Math.floor(this.crashMultiplier*this.crashBet).toLocaleString()} FATTY BUCKS)</button>
           </div>
         `:`
           <div style="display: flex; flex-direction: column; gap: 1rem; align-items: center;">
