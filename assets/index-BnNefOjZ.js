@@ -3568,11 +3568,16 @@ This typically indicates that your device does not have a healthy Internet conne
 
         <div style="background: var(--bg-tertiary); border: 2px solid var(--border); border-radius: 12px; padding: 2rem; margin-bottom: 2rem;">
           <!-- Plinko Board Visual -->
-          <div style="position: relative; height: 400px; background: var(--bg-secondary); border-radius: 12px; overflow: hidden;">
+          <div id="plinko-board" style="position: relative; height: 400px; background: var(--bg-secondary); border-radius: 12px; overflow: hidden;">
             <svg width="100%" height="100%" style="display: block;">
               <!-- Pegs -->
               ${Array.from({length:8},(e,t)=>Array.from({length:t+3},(r,s)=>{const i=(s+1)*(100/(t+4))+"%",a=(t+1)*45+"px";return`<circle cx="${i}" cy="${a}" r="4" fill="var(--accent-gold)" />`}).join("")).join("")}
             </svg>
+
+            <!-- Ball -->
+            ${this.plinkoDropping?`
+              <div id="plinko-ball" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 20px; height: 20px; background: white; border: 2px solid var(--accent-gold); border-radius: 50%; box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); animation: plinkoDrop 2s ease-in forwards;"></div>
+            `:""}
 
             <!-- Multiplier Slots at Bottom -->
             <div style="position: absolute; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; padding: 0.5rem;">
